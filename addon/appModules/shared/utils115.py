@@ -25,7 +25,7 @@ addonHandler.initTranslation()
 
 gRegFTI = re.compile("all-|unread-|smart-|favorite-|recent-|tags-")
 gRegTags = re.compile(r'<.*?>')
-
+# gRegConvertLF = re.compile(r'(?<!\r)\n')
 prevSpeechMode = ""
 
 def getBrailleParam(param="mode") :
@@ -71,7 +71,7 @@ def brailleClear() :
 
 def brailleMessagePersistent(msg, scrollMsg=""):
 	# function by André from AccessSolutions France
-	beep(700, 10)
+	# for testing api.copyToClip(scrollMsg+msg)
 	region = braille.TextRegion(scrollMsg + msg)
 	region.obj = None
 	region.update()
@@ -116,11 +116,17 @@ def sayLongText(text, speech=True):
 	if text is None :
 		return
 		
-	text = text.replace(chr(30), "").replace("", "").strip()
+	text = text.replace(chr(30), "").replace(chr(31), "").replace("\r", "").strip()
+	
 	if speech:
 		speakText(text.strip()) # strip is very important for sapi5 neural voices
 	if sharedVars.brailleScrollLong  :
-		brailleMessagePersistent(text, "Scrollable: ")
+		# replace \n by ¶
+		text = text.replace("\n", "¶  ")
+		# api.copyToClip(text)
+		# beep(440, 30)
+
+		brailleMessagePersistent(text, _("[Scrollable]") + " ")
 	else :
 		messageBraille(text)
 
@@ -1389,17 +1395,17 @@ def getAttachment(oFocus=None, repeats=0) :
 	ID = str(getIA2Attr(oLast))
 	if ID in ("messagepane", "content") :
 		return message(_("No attachment."))
-	elif ID.startswith("attachmentSaveAll") :  # hidden attachment list
-		o = oStart
-		# search  :   Role.TOGGLEBUTTON, ID : attachmentToggle, childCount : 0
-		while o :
-			ID = str(getIA2Attr(o))
-			if o.role == controlTypes.Role.TOGGLEBUTTON and ID == "attachmentToggle" :
-				if controlTypes.State.PRESSED not in o.states : 
-					# beep(440, 10)
-					CallAfter(o.doAction)
-					return
-			o = o.next
+	# elif ID.startswith("attachmentSaveAll") :  # hidden attachment list
+		# o = oStart
+		# # search  :   Role.TOGGLEBUTTON, ID : attachmentToggle, childCount : 0
+		# while o :
+			# ID = str(getIA2Attr(o))
+			# if o.role == controlTypes.Role.TOGGLEBUTTON and ID == "attachmentToggle" :
+				# if controlTypes.State.PRESSED not in o.states : 
+					# # beep(440, 10)
+					# CallAfter(o.doAction)
+					# return
+			# o = o.next
 	elif ID == "attachmentList" : 
 		oList = oLast
 
@@ -1422,8 +1428,15 @@ def getAttachment(oFocus=None, repeats=0) :
 			o = o.next
 		message(text + ", " + _("Two presses to reach the list."))
 	elif repeats > 0 : 
-		if  oList.childCount  > 1 : oList.setFocus()
-		else : CallAfter(clickObject, oList, False) # right click
+		cc = oList.childCount
+		if cc >  0 : 
+			oList = oList.firstChild
+			oList.setFocus()
+			if cc > 1 :
+				return
+			cancelSpeech()
+			CallLater(500, message, oList.name)
+			KeyboardInputGesture.fromName("shift+f10").send()
 
 def getChildByRoleIDName(oParent, role, ID, name, idx=0) : # attention : controlTypes roles
 	if sharedVars.debug : 

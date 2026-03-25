@@ -28,7 +28,7 @@ totalColIdx = 0
 curWinTitle = ""
 curTTRow = ""  # current thread tree row
 oQuoteNav = None
-oEditing = None
+msgComposeBox = None
 msgOpened = ""
 prevObj = ""
 chichi = None
@@ -47,6 +47,7 @@ import quoteNav
 def initQuoteNav() :
 	global oQuoteNav
 	oQuoteNav = quoteNav.QuoteNav()
+	
 import inspect
 oSettings = None # options menu
 import menuSettings
@@ -71,6 +72,9 @@ def logInit(msg="") :
 			debugLog = ""
 def logte(msg, init=False) :
 	global debugLog
+	# for test
+	init = False
+	# end texst
 	if init :
 		debugLog = msg + "\n"
 	else :

@@ -448,7 +448,9 @@ class MessageListItem(IAccessible):
 				sleep(0.1)
 				api.processPendingEvents()
 			if not o : return # 2023-09-12 gesture.send()
-			else : return sharedVars.oQuoteNav.readMail(self, o, ("shift" in gesture.modifierNames))
+			else : 
+				# readMail(oFocus, oDoc, rev = False, spkMode=1)
+				return sharedVars.oQuoteNav.readMail(self, o, ("shift" in gesture.modifierNames))
 		else : return gesture.send()
 	script_readPreview.__doc__ = _("Filtered reading of the message preview pane without leaving the list.")
 	script_readPreview.category=sharedVars.scriptCategory

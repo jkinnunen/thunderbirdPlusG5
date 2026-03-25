@@ -24,7 +24,7 @@ _curAddon=addonHandler.getCodeAddon()
 sharedPath=os.path.join(_curAddon.path,"AppModules", "shared")
 sys.path.append(sharedPath)
 import  utis, sharedVars 
-from utils115 import message, findChildByRoleID
+from utils115 import message, findChildByRoleID, getChildByRoleIDName
 del sys.path[-1]
 addonHandler.initTranslation()
 
@@ -38,7 +38,7 @@ class SpellCheckDlg (IAccessible):
 		if  role == controlTypes.Role.EDITABLETEXT :
 			sleep(0.05)
 			self.bindGestures ({"kb:nvda+tab":"reportFocus","kb:ALT+UPARROW":"reportFocus","kb:alt+downArrow":"focusSuggested", "kb:enter":"enterFromEdit", "kb:shift+enter":"enterFromEdit", "kb:control+enter":"enterFromEdit", "kb:control+shift+enter":"enterFromEdit", "kb:alt+enter":"enterFromEdit", "kb:alt+i":"altLetter", "kb:alt+n":"altLetter", "kb:alt+r":"altLetter", "kb:alt+t":"altLetter", "kb:alt+a":"altLetter", "kb:control+space":"spaceFromEdit"})
-			sharedVars.logte("spellCheckDlg editable bound")
+			# sharedVars.logte("spellCheckDlg editable bound")
 		elif role == controlTypes.Role.LISTITEM :	
 			if utis.getIA2Attribute(self.parent, "SuggestedList", "id") :
 				self.bindGestures ({"kb:ALT+upArrow":"focusEdit", "kb:enter":"enterFromList", "kb:shift+enter":"enterFromList"})
@@ -184,13 +184,32 @@ class SpellCheckDlg (IAccessible):
 		misp = self.parent.getChild (1).name
 		if c == 0 :
 			CallAfter(self.sayWords, False)
-		elif c == 1 :
-			if not sharedVars.oQuoteNav : sharedVars.initQuoteNav()
-			sharedVars.oQuoteNav.setDoc(sharedVars.oEditing, nav=True, fromSpellCheck=True)
-			sharedVars.oQuoteNav.setText(0) # speakMode=0 silent
-			sharedVars.oQuoteNav.findItem(misp)
+		elif c == 1 : # say phrase with mispelled word
+			if not sharedVars.oQuoteNav : 
+				return beep(100, 40)
+			sharedVars.oQuoteNav.findLine(misp)
 		else :
 			copyToClip (misp)
 			message(misp + _(", copied to clipboard"))
 	script_reportFocus.__doc__ = _("Announce or spell the misspelled word and the suggested word.")
 
+# def findPhrase(frame, mispelled="") :
+	# errMsg = _("NVDA Object  not found:")
+	# if not frame :
+		# beep(100, 30)
+		# return errMsg + " frame."
+
+	# # IA2ID = composeContentBox in , Role.SECTION
+	# o = getChildByRoleIDName(frame, controlTypes.Role.SECTION, ID="composeContentBox", name="", idx=0)
+	# if not o : return errMsg + " section composeContentBox."
+	# # IA2ID = messageArea in , Role.SECTION
+	# o = getChildByRoleIDName(o, controlTypes.Role.SECTION, ID="messageArea", name="", idx=3)
+	# if not o : return errMsg + " section message area."
+	# # IA2ID = messageEditor in , Role.INTERNALFRAME
+	# o = getChildByRoleIDName(o, controlTypes.Role.INTERNALFRAME, ID="messageEditor", name="", idx=0)
+	# if not o : return errMsg + " internal frame message editor."
+	# # Translators: Corps du message
+	# o = getChildByRoleIDName(o, controlTypes.Role.DOCUMENT, ID="", name="", idx=0)
+	# if not o : return errMsg + " document."
+	# return "Message body not found"
+	# return "document found"

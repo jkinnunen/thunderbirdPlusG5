@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Thunderbird+G5\n"
-"POT-Creation-Date: 2026-02-14 09:38+0100\n"
+"POT-Creation-Date: 2026-02-20 08:21+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Pierre-Louis R. <plr.listes@rptools.org>\n"
 "Language-Team: Pierre-Louis Renaud\n"
@@ -669,12 +669,12 @@ msgid ""
 "Braille: display email previews or their translation as a scrollable message"
 msgstr ""
 "Braille : affichez les aperçus d'e-mails ou leur traduction sous forme de "
-"message scrollables"
+"message avec défilement"
 
 #: addon/appModules/shared/menuSettings.py:100
 msgid "Braille: display other messages as scrollable messages"
 msgstr ""
-"Braille : Afficher les autres messages sous forme de messages scrollables"
+"Braille : Afficher les autres messages sous forme de messages avec défilement"
 
 #: addon/appModules/shared/menuSettings.py:100
 msgid "Message list : deactivate  tag management   to improve responsiveness."
@@ -784,72 +784,72 @@ msgstr "Autres options"
 msgid "Focus and Startup Options"
 msgstr "Options de focus et de démarrage"
 
-#: addon/appModules/shared/quoteNav.py:42
+#: addon/appModules/shared/quoteNav.py:43
 msgid "On|Le%date_sender%wrote|écrit"
 msgstr "Le|On%date_sender%écrit|wrote"
 
-#: addon/appModules/shared/quoteNav.py:76
+#: addon/appModules/shared/quoteNav.py:77
 msgid "Enabling message translation mode, ready."
 msgstr "Activation du mode de traduction des messages, prêt."
 
-#: addon/appModules/shared/quoteNav.py:77
+#: addon/appModules/shared/quoteNav.py:78
 msgid "Disabling message translation mode, ready."
 msgstr "Désactivation du mode de traduction des messages, prêt."
 
-#: addon/appModules/shared/quoteNav.py:90
+#: addon/appModules/shared/quoteNav.py:91
 msgid "The Instant Translate add-on is not active or not installed."
 msgstr ""
 "Le module complémentaire Instant Translate n’est pas actif ou n’est pas "
 "installé."
 
-#: addon/appModules/shared/quoteNav.py:96
+#: addon/appModules/shared/quoteNav.py:97
 msgid "Enabling message display mode, ready."
 msgstr "Activation du mode d'affichage des messages, prêt."
 
-#: addon/appModules/shared/quoteNav.py:97
+#: addon/appModules/shared/quoteNav.py:98
 msgid "Disabling message display mode, ready."
 msgstr "Désactivation du mode d'affichage des messages, prêt."
 
-#: addon/appModules/shared/quoteNav.py:187
+#: addon/appModules/shared/quoteNav.py:188
 msgid "Please wait"
 msgstr "Veuillez patienter"
 
-#: addon/appModules/shared/quoteNav.py:251
+#: addon/appModules/shared/quoteNav.py:252
 #, python-brace-format
 msgid "{0} messages in chronological order, "
 msgstr "{0} messages dans l'ordre chrono"
 
-#: addon/appModules/shared/quoteNav.py:257
+#: addon/appModules/shared/quoteNav.py:258
 #, python-brace-format
 msgid "{0} messages, {1} lines, "
 msgstr "{0} messages, {1} lignes, "
 
-#: addon/appModules/shared/quoteNav.py:289
+#: addon/appModules/shared/quoteNav.py:290
 msgid "Translation"
 msgstr "Traduction"
 
-#: addon/appModules/shared/quoteNav.py:312
+#: addon/appModules/shared/quoteNav.py:313
 msgid "Preview copied: "
 msgstr "Aperçu copié."
 
-#: addon/appModules/shared/quoteNav.py:363
+#: addon/appModules/shared/quoteNav.py:364
 msgid "Original Message|E-mail d'origine|Message d'origine"
 msgstr "Message d'origine|Original Message|E-mail d'origine"
 
-#: addon/appModules/shared/quoteNav.py:389
+#: addon/appModules/shared/quoteNav.py:390
 msgid "You are receiving this message because you are subscribed to the group"
 msgstr "Vous recevez ce message, car vous êtes abonné au groupe"
 
-#: addon/appModules/shared/quoteNav.py:418
+#: addon/appModules/shared/quoteNav.py:419
 #, python-format
 msgid " link %s "
 msgstr " lien %s "
 
-#: addon/appModules/shared/quoteNav.py:494
+#: addon/appModules/shared/quoteNav.py:495
 msgid "From|De|Expéditeur"
 msgstr "De|From|Expéditeur"
 
-#: addon/appModules/shared/quoteNav.py:519
+#: addon/appModules/shared/quoteNav.py:520
 msgid "wrote"
 msgstr "a écrit"
 
@@ -930,56 +930,60 @@ msgid "Error, the information cannot be copied to the clipboard"
 msgstr ""
 "Erreur, les informations ne peuvent pas être copiées dans le presse-papiers"
 
-#: addon/appModules/shared/utils115.py:885
+#: addon/appModules/shared/utils115.py:126
+msgid "[Scrollable]"
+msgstr "[Défil.]"
+
+#: addon/appModules/shared/utils115.py:888
 msgid "Filtered : "
 msgstr "Filtrés : "
 
-#: addon/appModules/shared/utils115.py:904
+#: addon/appModules/shared/utils115.py:907
 msgid "Filter : "
 msgstr "Filtre : "
 
-#: addon/appModules/shared/utils115.py:943
+#: addon/appModules/shared/utils115.py:946
 msgid "message list header is hiddend."
 msgstr "L'entête de la liste des messages est masqué"
 
-#: addon/appModules/shared/utils115.py:1012
-#: addon/appModules/shared/utils115.py:1530
+#: addon/appModules/shared/utils115.py:1015
+#: addon/appModules/shared/utils115.py:1533
 msgid "The preview pane is not displayed. Press F8 and try again please"
 msgstr "Le volet d'aperçu n'est pas affiché. Pressez F8 et recommencez SVP"
 
-#: addon/appModules/shared/utils115.py:1232
+#: addon/appModules/shared/utils115.py:1235
 #: addon/appModules/thunderbird.py:1004
 msgid "Press right arrow and retry, please."
 msgstr "Veuillez presser flèche droite puis réessayez."
 
-#: addon/appModules/shared/utils115.py:1244
+#: addon/appModules/shared/utils115.py:1247
 #: addon/appModules/thunderbird.py:1177
 msgid "The headers pane is not displayed. Please press F8 then try again"
 msgstr ""
 "Le volet des entêtes n'est pas affiché. Veuillez presser F8 puis réessayer"
 
-#: addon/appModules/shared/utils115.py:1252
+#: addon/appModules/shared/utils115.py:1255
 msgid "The headers are not available"
 msgstr "Les entête ne sont pas disponibles."
 
-#: addon/appModules/shared/utils115.py:1347
+#: addon/appModules/shared/utils115.py:1350
 msgid "void,From,Subject: ,Date,To,CC,BCC,Reply to"
 msgstr "rien,De,Objet: ,Date,Pour,Copie à,Copie cachée à,Répondre à"
 
-#: addon/appModules/shared/utils115.py:1348
+#: addon/appModules/shared/utils115.py:1351
 #, python-brace-format
 msgid "The {0} header is missing from this message."
 msgstr "L'entête {0} est absent de ce message."
 
-#: addon/appModules/shared/utils115.py:1359
+#: addon/appModules/shared/utils115.py:1362
 msgid "Copy to clipboard"
 msgstr "Copier dans le presse-papiers"
 
-#: addon/appModules/shared/utils115.py:1391
+#: addon/appModules/shared/utils115.py:1394
 msgid "No attachment."
 msgstr "Aucune pièce jointe."
 
-#: addon/appModules/shared/utils115.py:1423
+#: addon/appModules/shared/utils115.py:1426
 msgid "Two presses to reach the list."
 msgstr "Deux appuis pour accéder à la liste."
 
@@ -1273,7 +1277,11 @@ msgstr ""
 msgid "Running Thunderbird  detected"
 msgstr "Thunderbird en cours d'exécution détecté"
 
-#: buildVars.py:14
+#: buildVars.py:20
+msgid "Visit the full changelog"
+msgstr "Visiter l'historique complet"
+
+#: buildVars.py:33
 msgid ""
 "This add-on significantly increases the efficiency and comfort of using "
 "Thunderbird with NVDA."
@@ -1281,17 +1289,8 @@ msgstr ""
 "Cette extension augmente considérablement l'efficacité le confort "
 "d'utilisation de Thunderbird avec NVDA."
 
-#: buildVars.py:15
-msgid "For old releases, visit:"
-msgstr "Pour les anciennes versions, visitez : "
-
-#: buildVars.py:23
-msgid "Visit the full changelog"
-msgstr "Visiter l'historique complet"
-
-#: buildVars.py:33
-msgid "Thunderbird+ G5.1 (TB >= 140)"
-msgstr ""
+#~ msgid "For old releases, visit:"
+#~ msgstr "Pour les anciennes versions, visitez : "
 
 #~ msgid ""
 #~ "Separate reading window: do not read the cleaned version of the message "

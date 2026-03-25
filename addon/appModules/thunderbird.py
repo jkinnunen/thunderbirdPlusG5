@@ -299,8 +299,8 @@ class AppModule(thunderbird.AppModule):
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
 		if sharedVars.objLooping  or self.disabMode == 1 : return
 		role = obj.role
-		if role == controlTypes.Role.DOCUMENT  and  controlTypes.State.EDITABLE in obj.states :
-			sharedVars.oEditing = obj ; sharedVars.curFrame = "msgcomposeWindow" ; sharedVars.curTab = "comp"
+		# if role == controlTypes.Role.DOCUMENT  and  controlTypes.State.EDITABLE in obj.states :
+		if sharedVars.curTab == "comp" : # compose Window
 			return
 		# reduce verbosity
 		if role == controlTypes.Role.GROUPING : obj.name = "" ; return 
@@ -386,12 +386,12 @@ class AppModule(thunderbird.AppModule):
 				if o :
 					sharedVars.curFrame = "messengerWindow" ; sharedVars.curTab =  "message" 
 				return nextHandler()
-			# compose window : 14 children
-			elif childCount < 15 :
-				o = utils.findChildByRoleID(obj,controlTypes.Role.POPUPMENU, ID="msgComposeContext", startIdx=1)
-				if o :
-					sharedVars.curTab = "comp" ; sharedVars.curFrame="msgcomposeWindow" 
-				return nextHandler()
+			# compose window : 14 childrenbefore, 23 in 2026
+			# elif childCount < 15 : # obsolete
+				# o = utils.findChildByRoleID(obj,controlTypes.Role.POPUPMENU, ID="msgComposeContext", startIdx=1)
+				# if o :
+					# sharedVars.curTab = "comp" ; sharedVars.curFrame="msgcomposeWindow" 
+				# return nextHandler()
 			# filterList
 			elif childCount < 20 : 
 				if utils.hasID(obj.getChild(1), "serverMenu") :
@@ -484,6 +484,11 @@ class AppModule(thunderbird.AppModule):
 	def event_focusEntered (self,obj,nextHandler):
 		if self.logEvents : sharedVars.log(obj, "Event focusEntered start: ")
 		role, ID  = obj.role, str(utils.getIA2Attr(obj))
+		if role == controlTypes.Role.SECTION and  ID == "composeContentBox" : 
+			sharedVars.curFrame = "msgcomposeWindow"
+			sharedVars.curTab = "comp"
+			sharedVars.msgComposeBox = obj
+			return nextHandler()
 		if  sharedVars.curFrame == "msgcomposeWindow" and ID == "msgIdentity" :
 			return #  No nextHandler()
 			
@@ -679,8 +684,7 @@ class AppModule(thunderbird.AppModule):
 				globalVars.TBPropertyPage = obj
 		nextHandler()
 
-	# def event_nameChange(self,obj,nextHandler) :
-		# # detects content change in the current row of the message liste. When m or s are  pressed for example
+# # detects content change in the current row of the message liste. When m or s are  pressed for example
 		# if obj.role in (controlTypes.Role.LISTITEM, controlTypes.Role.TREEVIEWITEM) and  utils.hasID(obj, "threadTree-row") :
 			# # sharedVars.logte("nameChange" + str(obj.name))
 			# sharedVars.curTTRow = obj.name
@@ -824,9 +828,8 @@ class AppModule(thunderbird.AppModule):
 				else :
 					message(o.name)
 		if sharedVars.curTab == "message" :
-			if sharedVars.debug :
-				beep(600, 40)
-				sharedVars.debugLog= "sharedEscape, curTab = message, send alt+f4" + "\n" + sharedVars.debugLog
+			if role == controlTypes.Role.LISTITEM and utils.hasID(o.parent, "attachmentList") :
+				return  KeyboardInputGesture.fromName("shift+f6").send()
 			# this closes TB sometimes -> return KeyboardInputGesture.fromName ("alt+f4").send()  
 			return KeyboardInputGesture.fromName ("escape").send()  
 		elif  "Recipient" in ID  or "expandedsubjectBox" in ID or "Recipient" in str(utils.getIA2Attr(o.parent)) : # header pane
@@ -942,6 +945,19 @@ class AppModule(thunderbird.AppModule):
 		messengerWindow.tabs.tabContextMenu(self, sharedVars.oCurFrame)
 	script_sharedAltEqual.__doc__ = _("Tabs: Displays the context menu of the selected tab in the main window.")
 	script_sharedAltEqual.category = sharedVars.scriptCategory
+
+	def  script_sharedF5(self, gesture) : # show tabs menu
+		# for  F5   to call spellCheck dialog
+		if sharedVars.curFrame != "msgcomposeWindow" : return gesture.send()
+		oDoc, msg = getComposingDoc() 
+		if not oDoc :
+			utils.message(msg)
+			return KeyboardInputGesture.fromName("f7").send()
+		# if not sharedVars.oQuoteNav : 
+		sharedVars.initQuoteNav()
+		sharedVars.oQuoteNav.setDoc(oDoc, nav=True, fromSpellCheck=True)
+		sharedVars.oQuoteNav.setText(0) # speakMode=0 silent
+		KeyboardInputGesture.fromName("f7").send()
 
 	def  script_sharedCtrlF8(self, gesture) : # show tabs menu
 		if sharedVars.curFrame != "messengerWindow" : return gesture.send()
@@ -1201,9 +1217,9 @@ class AppModule(thunderbird.AppModule):
 		if not sharedVars.oQuoteNav :
 			return message(_("Press alt+upArrow before navigating through quotes in a message."))
 		if mainKey == "upArrow" :
-			sharedVars.oQuoteNav.skip(-1)
+			sharedVars.oQuoteNav.skipLine(-1)
 		elif mainKey == "downArrow" :
-			sharedVars.oQuoteNav.skip()
+			sharedVars.oQuoteNav.skipLine()
 		if mainKey == "leftArrow" :
 			sharedVars.oQuoteNav.skipQuote(-1)
 		elif mainKey == "rightArrow" :
@@ -1379,6 +1395,7 @@ class AppModule(thunderbird.AppModule):
 		# "kb:control+0": "sharedCtrlN",
 		utis.gestureFromScanCode(13, "kb:control+") : "sharedCtrlF8", # 13 : first hey at the left of backspace
 		utis.gestureFromScanCode(13, "kb:alt+") : "sharedAltEqual",
+		"kb:f5": "sharedF5", # spellCheck dialog
 		"kb:control+f8": "sharedCtrlF8", # show tabs menu
 		# "kb:alt+pageup": "smartReplyToSender", # smart reply
 		"kb:control+t": "smartReplyToSender",
@@ -1523,3 +1540,20 @@ def activateMenuItem(o, ID) :
 			o = o.next
 	finally :
 		speech.setSpeechMode(speech.speech.SpeechMode.talk)
+
+def getComposingDoc() :
+	errMsg = _("NVDA Object  not found:")
+	if not sharedVars.msgComposeBox :
+		beep(100, 30)
+		return None, errMsg + " Compose box."
+
+	# IA2ID = messageArea in , Role.SECTION
+	o = utils.getChildByRoleIDName(sharedVars.msgComposeBox, controlTypes.Role.SECTION, ID="messageArea", name="", idx=3)
+	if not o : return None, errMsg + " section message area."
+	# IA2ID = messageEditor in , Role.INTERNALFRAME
+	o = utils.getChildByRoleIDName(o, controlTypes.Role.INTERNALFRAME, ID="messageEditor", name="", idx=0)
+	if not o : return None, errMsg + " internal frame message editor."
+	# Translators: Corps du message
+	o = utils.getChildByRoleIDName(o, controlTypes.Role.DOCUMENT, ID="", name="", idx=0)
+	if not o : return None, errMsg + " document."
+	return o, "document found"
