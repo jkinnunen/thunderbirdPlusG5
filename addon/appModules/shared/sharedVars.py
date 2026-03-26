@@ -1,7 +1,7 @@
 #-*- coding:utf-8 -*
 from re import compile, IGNORECASE
 debug = False
-# logEvents = True
+logEvents = False
 starting = True
 regExp_nameListGroup, regExp_AnnotationResponse, regExp_mailAddress  = compile ("\[.*\]|\{.*\}"), compile("re[ ]*:[ ]", IGNORECASE), compile("\S+?@\S+?\.\S+")
 regExp_mailAddr = compile("\s*<[^>]+>") # v2512.01

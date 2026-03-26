@@ -140,7 +140,7 @@ class QuoteNav() :
 	curItem =  lastItem = curQuote = 0
 
 	def __init__(self) :
-		self.debug = True
+		self.debug = False
 		self.clean = not sharedVars.oSettings.getOption("mainWindow", "CleanPreview") 
 		self.text = ""
 		self.lLines   = []
@@ -319,7 +319,7 @@ class QuoteNav() :
 		self.text=self.regHTMLChars.sub(" ",self.text)
 		self.text=self.regHTML.sub(" ",self.text)
 		# beep(100, 20)
-		sharedVars.debugLog = "Draft :\n" + self.text
+		# sharedVars.debugLog = "Draft :\n" + self.text
 		callLater(500, utils.sayLongText, self.text, True)
 	
 	def getDocObjects(self, oDoc) :
