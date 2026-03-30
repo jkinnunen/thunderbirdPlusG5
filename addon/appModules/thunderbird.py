@@ -1,4 +1,5 @@
 # ThunderbirdPlusG5 for Thunderbird 115+
+# ThunderbirdPlusG5 for Thunderbird 115+
 
 from nvdaBuiltin.appModules import thunderbird
 from time import time, sleep
@@ -792,6 +793,9 @@ class AppModule(thunderbird.AppModule):
 			return
 		elif utils.isFolderTreeItem(o, ID) : 
 			return wx.CallAfter(specialSendKey, "f6")
+		elif o.role == controlTypes.Role.LISTITEM and utils.hasID(o.parent, "attachmentList") :
+			o.parent.previous.doAction()
+			return
 		elif sharedVars.curTab == "sp:addressbook" :
 			if utis.TBMajor() > 127 :
 				nextGesture = messengerWindow.tabAddressBook.getNextControl(o, ID)
@@ -830,15 +834,11 @@ class AppModule(thunderbird.AppModule):
 		if sharedVars.curTab == "message" :
 			if role == controlTypes.Role.LISTITEM and utils.hasID(o.parent, "attachmentList") :
 				return  KeyboardInputGesture.fromName("shift+f6").send()
-			# this closes TB sometimes -> return KeyboardInputGesture.fromName ("alt+f4").send()  
-			return KeyboardInputGesture.fromName ("escape").send()  
 		elif  "Recipient" in ID  or "expandedsubjectBox" in ID or "Recipient" in str(utils.getIA2Attr(o.parent)) : # header pane
 			return KeyboardInputGesture.fromName ("shift+f6").send()
-		elif role in  (controlTypes.Role.BUTTON, controlTypes.Role.TOGGLEBUTTON)  and ID.startswith("attachment") :
+		elif role ==  controlTypes.Role.TOGGLEBUTTON  and ID.startswith("attachment") :
 			return KeyboardInputGesture.fromName ("shift+f6").send()
 		elif role == controlTypes.Role.LISTITEM and utils.hasID(o.parent, "attachmentList") :
-			return KeyboardInputGesture.fromName ("shift+f6").send()
-		elif  utils.hasID(o.parent, "attachmentBucket") :  # attachment list in write window
 			return KeyboardInputGesture.fromName ("shift+f6").send()
 		elif sharedVars.curTab == "sp:addressbook"   and role !=  controlTypes.Role.MENUITEM :
 			if utis.TBMajor() > 127 :

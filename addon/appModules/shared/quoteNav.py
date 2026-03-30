@@ -442,9 +442,9 @@ class QuoteNav() :
 		count = len(messages)
 		
 		if count >= 2:
-			return str(messages[:2])
-		elif count > 0:
-			return str(messages[:1])
+			return str(messages[:2]).replace("\\n", chr(10))
+		elif count > 0 :
+			return str(messages[:1]).replace("\\n", chr(10))
 		else:
 			return "No message found."
 			

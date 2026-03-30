@@ -1386,6 +1386,72 @@ def getAttachment(oFocus=None, repeats=0) :
 	else : return beep(100, 30)
 	
 	# common to list and separate reading window
+	# current object is grouping with no IA2ID
+	oStart = o.getChild(14) # cannot be 15 which ID is messagePane
+	oLast = o.lastChild
+	oList = oLast if oLast.role == controlTypes.Role.LIST  else None
+	ID = str(getIA2Attr(oLast))
+	if ID in ("messagepane", "content") :
+		return message(_("No attachment."))
+	elif ID.startswith("attachmentSaveAll") :  # hidden attachment list
+		o = oStart
+		# 1: search  :   Role.TOGGLEBUTTON, ID : attachmentToggle, childCount : 0
+		while o :
+			ID = str(getIA2Attr(o))
+			if o.role == controlTypes.Role.TOGGLEBUTTON and ID == "attachmentToggle" :
+				if controlTypes.State.PRESSED not in o.states : 
+					o.doAction()
+					sleep(0.1)
+					oList = o.parent.lastChild
+				break
+			o = o.next
+	# 2: search again from oStart
+	text =  ""
+	o = oStart
+	while o :
+		# sharedVars.log(o, "getAttachmment, in loop : ")
+		ID = str(getIA2Attr(o))
+		if ID == "attachmentCount" :
+			text +=  str(o.name)
+		elif ID == "attachmentSize" :
+			text +=  o.name
+		o = o.next
+	if repeats == 0 :
+		text += ", "
+		o = oList.firstChild
+		while o : 
+			text += str(o.name) + ", "
+			o = o.next
+		message(text + ", " + _	("Two presses to reach the list."))
+		return
+	elif repeats > 0 : 
+		cc =  oList.childCount
+		if cc > 0 : 
+			oList = oList.firstChild
+			oList.setFocus()
+			if cc == 1 :
+				cancelSpeech()
+				CallLater(500, message, oList.name)
+				KeyboardInputGesture.fromName("shift+f10").send()
+
+def getAttachment_notOK(oFocus=None, repeats=0) :
+	# in  main window :name : doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID : attachmentName Path : Role-FRAME| i31, Role-GROUPING, , IA2ID : tabpanelcontainer | i2, Role-PROPERTYPAGE, , IA2ID : mail3PaneTab1 | i0, Role-INTERNALFRAME, , IA2ID : mail3PaneTabBrowser1 | i0, Role-GROUPING,  | i4, Role-SECTION, , IA2ID : messagePane | i0, Role-INTERNALFRAME, , IA2ID : messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID : attachmentName , IA2Attr : id : attachmentName, display : flex, xml-roles : button, tag : label, , Actions : click,  ;
+	# In separate window : 18 of 20, name : doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID : attachmentName, Path : Role-FRAME| i4, Role-INTERNALFRAME, IA2ID : messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID : attachmentName
+	# sharedVars.debugLog = "getAttachment, repeats : " + str(repeats) + "\n"
+	if not oFocus : oFocus = api.getFocusObject()
+	if oFocus.role in (controlTypes.Role.DOCUMENT, controlTypes.Role.LINK)  : 
+		# if repeats > 0 and oFocus.role == controlTypes.Role.LINK : beep(700, 40)
+		o = findParentByRole(oFocus, controlTypes.Role.GROUPING)
+		# sharedVars.log(o, "is Grouping from doc ? ")
+		if repeats > 0 and o.role != controlTypes.Role.GROUPING : return beep(100, 10)
+	elif hasID(oFocus, "threadTree") :
+		o = getMessagePane()
+		# sharedVars.log(o, "in mainWindow , expected messagePane")
+		o = o.firstChild.firstChild
+		# sharedVars.log(o, "in mainWindow , expected Grouping")
+	else : return beep(100, 30)
+	
+	# common to list and separate reading window
 	oStart = o.getChild(14) # cannot be 15 which ID is messagePane
 	oLast = o.lastChild
 	# sharedVars.log(oStart, "oStart, repeats : " + str(repeats))
