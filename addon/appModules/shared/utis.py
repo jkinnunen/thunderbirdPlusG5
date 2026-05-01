@@ -1,14 +1,9 @@
 #-*- coding:utf-8 -*
 
+import addonHandler
+addonHandler.initTranslation()
+
 import controlTypes
-# controlTypes module compatibility with old versions of NVDA
-# if not hasattr(controlTypes, "Role"):
-	# setattr(controlTypes, "Role", type('Enum', (), dict(
-	# [(x.split("ROLE_")[1], getattr(controlTypes, x)) for x in dir(controlTypes) if x.startswith("ROLE_")])))
-	# setattr(controlTypes, "State", type('Enum', (), dict(
-	# [(x.split("STATE_")[1], getattr(controlTypes, x)) for x in dir(controlTypes) if x.startswith("STATE_")])))
-	# setattr(controlTypes, "role", type("role", (), {"_roleLabels": controlTypes.roleLabels}))
-# End of compatibility fixes
 from tones import beep
 from re import compile
 from datetime import datetime
@@ -24,7 +19,7 @@ import speech
 from wx import CallAfter, Menu, MessageBox
 from core import callLater
 from winUser import setCursorPos, getKeyNameText 
-import addonHandler,  os, sys
+import  os, sys
 
 import api
 from api import copyToClip
@@ -36,7 +31,6 @@ GetNextSiblingElement =clientObject.RawViewWalker.GetNextSiblingElement
 import sharedVars
 from utils115 import message
 import globalVars
-addonHandler.initTranslation()
 
 prevSpeechMode = None
 

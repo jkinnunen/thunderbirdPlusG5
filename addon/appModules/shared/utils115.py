@@ -1,5 +1,6 @@
 #-*- coding:utf-8 -*
-import addonHandler		
+import addonHandler
+addonHandler.initTranslation()
 import controlTypes, api
 from speech import  speakMessage, speakText, speakSpelling, cancelSpeech, setSpeechMode, SpeechMode
 
@@ -12,6 +13,7 @@ from config.configFlags import (
 )
 from time import time, sleep
 from tones import beep
+import wx
 from wx  import  CallLater, CallAfter
 import sharedVars
 import globalVars
@@ -21,7 +23,6 @@ import keyboardHandler
 from keyboardHandler import KeyboardInputGesture
 import re
 
-addonHandler.initTranslation()
 
 gRegFTI = re.compile("all-|unread-|smart-|favorite-|recent-|tags-")
 gRegTags = re.compile(r'<.*?>')
@@ -1897,5 +1898,16 @@ def listDescendants(o=None, lev=0, tit=None) :
 			listDescendants(o, lev) 
 		i +=1
 		o = o.next
+
+class NVDATBMenu(wx.Menu):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	def AppendNVDAItem(self, item_id, label, nvda_obj):
+		"""Adds an item and links the NVDA object via ClientData."""
+		item = self.Append(item_id, label)
+		if item :
+			item.SetClientData(nvda_obj)
+		return item
 
 

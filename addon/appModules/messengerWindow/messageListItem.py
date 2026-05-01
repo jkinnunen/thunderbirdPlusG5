@@ -1,9 +1,12 @@
 #-*- coding:utf-8 -*
 # thunderbirdPlusG5 forr Thunderbird 115
-
+import addonHandler
+addonHandler.initTranslation()
 from tones  import beep
 import speech 
-from scriptHandler import getLastScriptRepeatCount
+from scriptHandler import script, getLastScriptRepeatCount
+
+
 import api, globalVars
 import winUser
 from api import copyToClip
@@ -15,7 +18,7 @@ from wx import CallAfter, CallLater
 from gui import messageBox
 from core import callLater
 from ui import  browseableMessage
-import addonHandler,  os, sys
+import addonHandler, os, sys
 _curAddon=addonHandler.getCodeAddon()
 sharedPath=os.path.join(_curAddon.path,"AppModules", "shared")
 sys.path.append(sharedPath)
@@ -25,7 +28,6 @@ from utils115 import message
 del sys.path[-1]
 
 from time import time, sleep
-addonHandler.initTranslation()
 
 # postMessage =windll.user32.PostMessageA
 # optimization : the dict below is initialized on add-on initialization
@@ -216,15 +218,16 @@ class MessageListItem(IAccessible):
 			s="Re"*n+" "+s
 		return s 
 
+	@script(
+		description=_("Message list : One press announces the current line, two presses displays the line text in a window."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sayLine(self, gesture):
 		rc =  int(getLastScriptRepeatCount ())
 		if rc > 0 :
 			browseableMessage (message= self.name.replace(", ", "\n"), title = _("Line details") + " - ThunderbirdPlus", isHtml = False)
 		else : # 1 press
 			message(self.name)
-	
-	script_sayLine.__doc__ = _("Message list : One press announces the current line, two presses displays the line text in a window.")
-	script_sayLine.category=sharedVars.scriptCategory
 
 	def script_selectLine(self, gesture) :
 		# if gesture.mainKeyName == "upArrow" : CallAfter(KeyboardInputGesture.fromName("b").send)
@@ -371,6 +374,10 @@ class MessageListItem(IAccessible):
 		TagSet =  self.getMessageTagSet() 
 		return setToStr(TagSet, _("Tags"), _("No tag."))
 
+	@script(
+		description=_("Shift + 1 to 8: announces the additions or removals of tags, Shift+0 announces the tags of the message"),
+		category=sharedVars.scriptCategory
+	)
 	def script_sayMessageTags(self,gesture):
 		if controlTypes.State.COLLAPSED in self.states :
 			return message(_("No tag on a collapsed discussion"))
@@ -409,9 +416,11 @@ class MessageListItem(IAccessible):
 			msgTags =  lblNoMore
 		newState = (lblAdded if tagName in msgTags else lblRemoved)
 		message("{0} : {1} {2}, {3}".format(lblTag, tagName, newState, msgTags))
-	script_sayMessageTags.__doc__ = _("Shift + 1 to 8: announces the additions or removals of tags, Shift+0 announces the tags of the message")
-	script_sayMessageTags.category=sharedVars.scriptCategory
 
+	@script(
+		description=_("Removes all tags from the selected message."),
+		category=sharedVars.scriptCategory
+	)
 	def script_removeMessageTags(self,gesture):
 		# translator
 		lblNoTag = _("No tag to remove.")
@@ -429,11 +438,13 @@ class MessageListItem(IAccessible):
 			# translator
 			lblNoTag = _("All tags have been removed from this message.")
 		return callLater(40, message, lblNoTag)
-	script_removeMessageTags.__doc__ = _("Removes all tags from the selected message.")
-	script_removeMessageTags.category=sharedVars.scriptCategory
 	# end of Message tags
 
 	# read preview panel for spaceBar
+	@script(
+		description=_("Filtered reading of the message preview pane without leaving the list."),
+		category=sharedVars.scriptCategory
+	)
 	def script_readPreview(self, gesture) :
 		if not sharedVars.oQuoteNav : sharedVars.initQuoteNav() # then use  sharedVars.oQuoteNav.*		sharedVars.regExp_date =compile ("^(\d\d/\d\d/\d{4} \d\d:\d\d|\d\d:\d\d)$")
 		utils.setMLIState(self)
@@ -452,8 +463,6 @@ class MessageListItem(IAccessible):
 				# readMail(oFocus, oDoc, rev = False, spkMode=1)
 				return sharedVars.oQuoteNav.readMail(self, o, ("shift" in gesture.modifierNames))
 		else : return gesture.send()
-	script_readPreview.__doc__ = _("Filtered reading of the message preview pane without leaving the list.")
-	script_readPreview.category=sharedVars.scriptCategory
 
 	def script_openMessage(self, gesture) :
 		if not sharedVars.oQuoteNav : sharedVars.initQuoteNav()
@@ -573,9 +582,10 @@ class MessageListItem(IAccessible):
 		if utils.hasID(self, "threadTree") :
 			return  KeyboardInputGesture.fromName ("control+shift+k").send()
 		gesture.send()
-	script_showFilterBar.__doc__ = _("Shows the quick filter bar from the message list.")
-	script_showFilterBar.category=sharedVars.scriptCategory
-
+	@script(
+		description=_("Shows the quick filter bar from the message list."),
+		category=sharedVars.scriptCategory
+	)
 	# def script_toggleUnread(self,gesture):
 		# sharedVars.lastKey = "Del"
 		# gesture.send ()
@@ -596,15 +606,17 @@ class MessageListItem(IAccessible):
 			# # sharedVars.curTTRow = self.appModule.buildColumnNames(self)
 	# script_toggleUnread.__doc__ = _("Reverses the read and unread status of the selected message")
 	# script_toggleUnread.category=sharedVars.scriptCategory
+
+	@script(
+		description=_("Reverses the read and unread status of the selected message"),
+		category=sharedVars.scriptCategory
+	)
 	def script_toggleUnread(self, gesture) :
 		gesture.send()
 		if not sharedVars.TTClean :
 			return
 		sleep(.2)
 		message(self.customizeRow())
-	script_toggleUnread.__doc__ = _("Reverses the read and unread status of the selected message")
-	script_toggleUnread.category=sharedVars.scriptCategory
-
 	# script_toggleUnread.__doc__ = _("Reverses the read and unread status of the selected message")
 	# script_toggleUnread.category=sharedVars.scriptCategory
 	

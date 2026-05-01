@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*
 # Thunderbird+ G5
-
+import addonHandler
+addonHandler.initTranslation()
 import api
 from time import sleep
 from NVDAObjects.IAccessible import IAccessible
@@ -9,9 +10,9 @@ import speech
 import controlTypes
 from wx import CallAfter, Menu, EVT_MENU
 from core import  callLater
-from scriptHandler import getLastScriptRepeatCount
+from scriptHandler import script, getLastScriptRepeatCount
 import winUser
-import 	addonHandler,  os, sys
+import os, sys
 from keyboardHandler import KeyboardInputGesture
 from tones import  beep
 _curAddon=addonHandler.getCodeAddon()
@@ -22,7 +23,6 @@ from utils115 import message
 del sys.path[-1]
 from re import  compile,IGNORECASE
 
-addonHandler.initTranslation()
 
 gRegExcludeFolders =compile (_("Drafts|Deleted") + "|\-, \d")
 gRegUnread = compile (", \d+")
@@ -66,39 +66,48 @@ class FolderTreeItem (IAccessible):
 			nm += ", " + o.name 
 		message(nm)
 
+	@script(
+		description=_("selects the first unread message in the list from the folder tree."),
+		category=sharedVars.scriptCategory
+	)
 	def script_ftiNextUnread(self, gesture) :
 		if getLastScriptRepeatCount() == 0 :
 			utils.focusTTFromFT(self, sharedVars.oSettings.getOption("messengerWindow", "focusMode", kind="i"))
-	script_ftiNextUnread.__doc__ = _("selects the first unread message in the list from the folder tree.")
-	script_ftiNextUnread.category = sharedVars.scriptCategory
 	# version g5
+	@script(
+		description=_("Folders : displays a menu allowing you to reach a subfolder of your choice."),
+		category=sharedVars.scriptCategory
+	)
 	def script_menuFolders(self, gesture) :
 		fMenuFolders(self, unread=False)
-	script_menuFolders.__doc__ = _("Folders : displays a menu allowing you to reach a subfolder of your choice.")
-	script_menuFolders.category = sharedVars.scriptCategory
-	
+
+	@script(
+		description=_("Folders : displays a menu allowing you to reach an unread folder of the current account."),
+	category=sharedVars.scriptCategory
+	)
 	def script_menuUnread(self, gesture) :
 		fMenuFolders(self, unread=True)
-	script_menuUnread.__doc__ = _("Folders : displays a menu allowing you to reach an unread folder of the current account.")
-	script_menuUnread.category = sharedVars.scriptCategory
 
+	@script(
+		description=_("Folders : display a menu  of all accounts and folders."),
+	category=sharedVars.scriptCategory
+	)
 	def script_menuAllFolders(self, gesture) :
 		o = fGetAccountNode(self)
 		if not o : beep(100, 15) ; return
 		m = FolderMenu(o.parent, unread=False, recurs=True, allFolders=1)
 		callLater(10, m.showMenu,title="All Folders, menu")
-	script_menuAllFolders.__doc__ = _("Folders : display a menu  of all accounts and folders.")
-	script_menuAllFolders.category = sharedVars.scriptCategory
 
+	@script(
+		description=_("Folders : display a menu of all unread accounts and folders."),
+		category=sharedVars.scriptCategory
+	)
 	def script_menuAllUnread(self, gesture) :
 		showInboxMenu(self, unreadOnly=True)
 		# o = fGetAccountNode(self)
 		# if not o : return
 		# m = FolderMenu(o.parent, unread=True, recurs=True, allFolders=1)
 		# callLater(10, m.showMenu,title="All Folders, menu")
-	script_menuAllUnread.__doc__ = _("Folders : display a menu of all unread accounts and folders.")
-	script_menuAllUnread.category = sharedVars.scriptCategory
-
 
 # functions version 5
 import globalVars
@@ -220,7 +229,6 @@ class InboxesMenu() :
 
 	def onIbMenu(self, evt):
 		o = self.ibFolders[evt.Id]
-		# self.ibFolders  = [] # freess memory after usage
 		utis.setSpeech(False)
 		if sharedVars.TBWnd :
 			winUser.setForegroundWindow(sharedVars.TBWnd)

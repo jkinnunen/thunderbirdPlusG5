@@ -1,6 +1,8 @@
 # ThunderbirdPlusG5 for Thunderbird 115+
 # ThunderbirdPlusG5 for Thunderbird 115+
 
+import addonHandler
+addonHandler.initTranslation()
 from nvdaBuiltin.appModules import thunderbird
 from time import time, sleep
 from datetime import datetime
@@ -10,6 +12,7 @@ import controlTypes
 import api
 import ui
 import scriptHandler
+from scriptHandler import script
 import winUser
 import speech
 import gui
@@ -20,7 +23,7 @@ import config
 from re import compile,IGNORECASE
 
 # shared modules import
-import addonHandler,  os, sys
+import os, sys
 _curAddon=addonHandler.getCodeAddon()
 sharedPath=os.path.join(_curAddon.path,"AppModules", "shared")
 sys.path.append(sharedPath)
@@ -29,19 +32,20 @@ from utils115 import message
 import  langUtils
 import textDialog
 # dbg = sharedVars.log
-# from  py3compatibility import *
-# from  py3compatibility import utis._unicode
 del sys.path[-1]
 
 import api
 
 sharedVars.scriptCategory = _curAddon.manifest['summary']
+# keys from scancodes
+# kBS1 = utis.gestureFromScanCode(13) # first key at the left of backspace
+# kBS2 = utis.gestureFromScanCode(12) # second key at the left of backspace
+kGrave			= utis.gestureFromScanCode(41) # the key above tab key
 
 # Extension modules import
 from . import messengerWindow, msgComposeWindow # , addressbookWindow
 from scriptHandler import getLastScriptRepeatCount
 
-addonHandler.initTranslation()
 
 def sayTreeItem(fo=None) :
 	try : # finally 
@@ -135,6 +139,11 @@ def processTrees(oFolders, oThreads) :
 class ListTreeView(IAccessible) :
 	def initOverlayClass (self):
 		self.bindGesture ("kb:f", "goFilterBar")
+	@script(
+		gesture="kb:f",
+		description=_("Focus the quick filter bar"),
+		category=sharedVars.scriptCategory
+	)
 	def script_goFilterBar(self, gesture) :
 		if sharedVars.curTab != "main" : return gesture.send() 
 		KeyboardInputGesture.fromName ("shift+control+k").send() 
@@ -150,6 +159,12 @@ class QuickFilterBar(IAccessible) :
 class TabAddons(IAccessible) :
 	def initOverlayClass (self):
 		self.bindGesture ("kb:enter", "validateEdit")
+
+	@script(
+		gesture="kb:enter",
+		description=_("Validate edit in addon search"),
+		category=sharedVars.scriptCategory
+	)
 	def script_validateEdit(self, gesture) :
 		gesture.send()
 		ParentPP  = utils.findParentByRole(self, controlTypes.Role.PROPERTYPAGE)
@@ -181,10 +196,6 @@ class AppModule(thunderbird.AppModule):
 		sharedVars.initSettingsMenu(self) # then use  sharedVars.oSettings.*
 		# initQuotenav  will be run at first use of quote Navigator >sharedVars.initQuoteNav() # then use  sharedVars.oQuoteNav.*		self.regExp_date =compile ("^(\d\d/\d\d/\d{4} \d\d:\d\d|\d\d:\d\d)$")
 		# all  self.regExp moved to sharedVars
-		k =  utis.gestureFromScanCode(41)
-		self.bindGesture("kb:control+" + k, "showContextMenu") # 41 is the scancode of the key above Tab
-		self.bindGesture("kb:shift+" + k,  "showOptionMenu") 
-		self.bindGesture("kb:" + k, "sharedGrave") # 41 is the scancode of the key above Tab
 		globalVars.TBPropertyPage = None
 		globalVars.TBFolderTree = None
 		globalVars.TBThreadTree = None
@@ -300,13 +311,18 @@ class AppModule(thunderbird.AppModule):
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
 		if sharedVars.objLooping  or self.disabMode == 1 : return
 		role = obj.role
-		# if role == controlTypes.Role.DOCUMENT  and  controlTypes.State.EDITABLE in obj.states :
-		if sharedVars.curTab == "comp" : # compose Window
+		ID = str(utils.getIA2Attr(obj))
+		# write or spellCheck dialog
+		if ID.startswith("ReplaceWordInput") or (role == controlTypes.Role.LISTITEM and utils.hasID(obj.parent, "SuggestedList")) :
+			clsList.insert (0,msgComposeWindow.spellCheckDlg.SpellCheckDlg)
 			return
+		if sharedVars.curTab == "comp" : # compose Window
+			return 
+
+
 		# reduce verbosity
 		if role == controlTypes.Role.GROUPING : obj.name = "" ; return 
 		
-		ID = str(utils.getIA2Attr(obj))
 		if role == controlTypes.Role.FRAME : 
 			sharedVars.curWinTitle = obj.name
 			return # deactivated since  2025.08.27 > m essengerWindow.tabs.setCurFrameTab(obj)
@@ -316,37 +332,28 @@ class AppModule(thunderbird.AppModule):
 		if role == controlTypes.Role.DOCUMENT and sharedVars.curTab in ("main", "message") :
 			if obj.name : sharedVars.curWinTitle = obj.name
 			obj.name = ""
-		#  list of messages 			
-		try :
-			if  role in (controlTypes.Role.LIST, controlTypes.Role.TREEVIEW) and utils.hasID(obj.parent.parent, "threadTree") :
-				clsList.insert(0, ListTreeView)
-		except :
-			pass
 			return
+		# List of messages
 		if role in (controlTypes.Role.LISTITEM, controlTypes.Role.TREEVIEWITEM) :
 			if ID.startswith("threadTree-row") :
 				# sharedVars.logte(" Overlay:" + obj.name)
 				sharedVars.curFrame = "messengerWindow" ; sharedVars.curTab = "main"
+				clsList.insert(0, ListTreeView)
 				clsList.insert(0, messengerWindow.messageListItem.MessageListItem)
 				return
+
 			if role == controlTypes.Role.TREEVIEWITEM and utils.isFolderTreeItem(obj, ID) :
+				clsList.insert(0, ListTreeView)
 				clsList.insert(0, messengerWindow.folderTreeItem.FolderTreeItem)
 				sharedVars.curFrame = "messengerWindow" ; sharedVars.curTab = "main"
 				return
 		# quick filter bar
 		if role ==  controlTypes.Role.TOGGLEBUTTON and ID.startswith("qfb-") :
 			clsList.insert (0, QuickFilterBar); return
-		# spellCheck dialog
-		if ID.startswith("ReplaceWordInput") or (role == controlTypes.Role.LISTITEM and utils.hasID(obj.parent, "SuggestedList")) :
-			clsList.insert (0,msgComposeWindow.spellCheckDlg.SpellCheckDlg); return
-			return
-	# special tabs documents 
-		if sharedVars.TBMajor < 115 : sharedVars.TBMajor = utis.TBMajor()
-
+		# special tabs documents 
 		if sharedVars.curTab == "sp:addressbook" :
-			if not  sharedVars.noAddressBook :  # and role in (controlTypes.Role.TREEVIEWITEM, controlTypes.Role.BUTTON, controlTypes.Role.EDITABLETEXT) :
-				if sharedVars.TBMajor < 128 :  clsList.insert(0, messengerWindow.tabAddressBook.AddressBook115)
-				else : clsList.insert(0, messengerWindow.tabAddressBook.AddressBook)
+			if not  sharedVars.noAddressBook :
+				clsList.insert(0, messengerWindow.tabAddressBook.AddressBook)
 
 		if sharedVars.curTab == "sp:addons" :
 			if role == controlTypes.Role.EDITABLETEXT :
@@ -441,7 +448,7 @@ class AppModule(thunderbird.AppModule):
 		if sharedVars.speechOff :
 			speech.setSpeechMode(speech.SpeechMode.talk)
 			sharedVars.speechOff = False
-		if  sharedVars.curFrame == "msgcomposeWindow" :
+		if  sharedVars.curTab == "comp" :
 			return nextHandler()
 		role = obj.role
 		if sharedVars.delPressed and role == controlTypes.Role.POPUPMENU and  utils.hasID(obj, "mailContext") :
@@ -732,6 +739,8 @@ class AppModule(thunderbird.AppModule):
 			# return
 		# nextHandler
 
+	# def event_NVDAObject_init(self, obj):
+		
 	def event_alert (self,obj,nextHandler):
 		label = ""
 		lButtons = []
@@ -780,6 +789,9 @@ class AppModule(thunderbird.AppModule):
 		# nextHandler()
 		
 	# gesture scripts
+	@script(
+		gesture="kb:tab",
+	)
 	def script_sharedTab(self, gesture) :
 		o=globalVars.focusObject 
 		ID = str(utils.getIA2Attr(o))
@@ -805,6 +817,9 @@ class AppModule(thunderbird.AppModule):
 				return KeyboardInputGesture.fromName ("f6").send () 
 		return gesture.send()
 
+	@script(
+		gesture="kb:escape",
+	)
 	def script_sharedEscape(self, gesture) :
 		if sharedVars.curTab == "msgPreview" :
 			# sharedVars.logte("sharedEscape, curTab = msgPreview, send shift+f6")
@@ -904,6 +919,11 @@ class AppModule(thunderbird.AppModule):
 				return KeyboardInputGesture.fromName ("shift+f6").send ()
 		return gesture.send()
 		
+	@script(
+		description=_("Announces abbreviated status line and message filtering information if applicable"),
+		category=sharedVars.scriptCategory,
+		gestures=["kb:alt+end", utis.gestureFromScanCode(12, "kb:alt+")]
+	)
 	def script_sharedAltEnd(self, gesture) :
 		# o = api.getFocusObject()
 		# if utils.currentTree(o, o.role) == "t"  or utils.hasID(o.parent, "quickFilterBarContainer") :
@@ -915,8 +935,6 @@ class AppModule(thunderbird.AppModule):
 		msg = utis.getStatusBarText()
 		if not msg : msg = _("Status line without data")
 		return message(msg)
-	script_sharedAltEnd.__doc__ = _("Announces abbreviated status line and message filtering information if applicable")
-	script_sharedAltEnd.category = sharedVars.scriptCategory
 
 	# def script_sharedCtrlTab(self, gesture) :
 		# # for test
@@ -929,23 +947,37 @@ class AppModule(thunderbird.AppModule):
 			# return gesture.send()
 
 
-	def script_smartReplyToSender(self, gesture) :
+	@script(
+		gesture="kb:control+t",
+		description=_("Smart reply : replies to the sender or to the  group"),
+		category=sharedVars.scriptCategory
+	)
+	def 	script_smartReplyToSender(self, gesture) :
 		wx.CallLater(25, utils.smartReplyV3,False, 0)
-	script_smartReplyToSender.__doc__ = _("Smart reply : replies to the sender or to the  group")
-	script_smartReplyToSender.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:shift+control+t",
+		description=_("Smart reply : with Shift,  replies to all or to the sender in a group"),
+		category=sharedVars.scriptCategory
+	)
 	def script_smartReplyToAll(self, gesture) :
 		wx.CallLater(25, utils.smartReplyV3, True, 0)
-	script_smartReplyToAll.__doc__ = _("Smart reply : with Shift,  replies to all or to the sender in a group")
-	script_smartReplyToAll.category = sharedVars.scriptCategory
+	
 
-
+	@script(
+		gesture=utis.gestureFromScanCode(13, "kb:alt+"),
+		description=_("Tabs: Displays the context menu of the selected tab in the main window."),
+		category=sharedVars.scriptCategory
+	)
 	def  script_sharedAltEqual(self, gesture) : # native context menu of active tab
 		if sharedVars.curFrame != "messengerWindow" : return
 		messengerWindow.tabs.tabContextMenu(self, sharedVars.oCurFrame)
-	script_sharedAltEqual.__doc__ = _("Tabs: Displays the context menu of the selected tab in the main window.")
-	script_sharedAltEqual.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:f5",
+		description=_("Write: displays the spell check dialog with the ability to listen to the phrase containing the misspelled word."),
+		category=sharedVars.scriptCategory
+	)
 	def  script_sharedF5(self, gesture) : # show tabs menu
 		# for  F5   to call spellCheck dialog
 		if sharedVars.curFrame != "msgcomposeWindow" : return gesture.send()
@@ -958,14 +990,22 @@ class AppModule(thunderbird.AppModule):
 		sharedVars.oQuoteNav.setDoc(oDoc, nav=True, fromSpellCheck=True)
 		sharedVars.oQuoteNav.setText(0) # speakMode=0 silent
 		KeyboardInputGesture.fromName("f7").send()
-
+	
+	@script(
+		description=_("Tabs: Displays the open tabs menu in the main window."),
+		category=sharedVars.scriptCategory,
+		gestures=["kb:control+f8", utis.gestureFromScanCode(13, "kb:control+")]
+	)
 	def  script_sharedCtrlF8(self, gesture) : # show tabs menu
 		if sharedVars.curFrame != "messengerWindow" : return gesture.send()
 		speech.cancelSpeech()
 		messengerWindow.tabs.showTabMenu(self, api.getFocusObject())
-	script_sharedCtrlF8.__doc__ = _("Tabs: Displays the open tabs menu in the main window.")
-	script_sharedCtrlF8.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+=",
+		description=_("Sends Control+F4 to the current window."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sendCtrlF4(self, gesture) :
 		if "shift"  in gesture.modifierNames :  return gesture.send()
 		fo = api.getFocusObject()
@@ -973,9 +1013,12 @@ class AppModule(thunderbird.AppModule):
 			if fo.role in (controlTypes.Role.EDITABLETEXT, controlTypes.Role.DOCUMENT) and controlTypes.State.READONLY  not in fo.states :
 				return gesture.send()
 		KeyboardInputGesture.fromName("control+f4").send()
-	script_sendCtrlF4.__doc__ = _("Sends Control+F4 to the current window.")
-	script_sendCtrlF4.category=sharedVars.scriptCategory
 
+	@script(
+		description= _("In the main window, 1 press: Alt+1 to 8: reads the message header, Alt+9 announces the number of attachments, 2 presses: displays the header in an edit box or for Alt+9, reaches the list of attachments, 3 presses: reaches the header in the headers area. In the Write window, Alt1 to 4, reads the headers, 2 presses reaches the header."),
+		category=sharedVars.scriptCategory,
+		gestures=["kb:alt+1", "kb:alt+2", "kb:alt+3", "kb:alt+4", "kb:alt+5", "kb:alt+6", "kb:alt+7", "kb:alt+8", "kb:alt+9"]
+	)
 	def script_sharedAltN(self, gesture) :
 		fo = api.getFocusObject()
 		ID = str(utils.getIA2Attr(fo))
@@ -1000,9 +1043,11 @@ class AppModule(thunderbird.AppModule):
 				self.timer = wx.CallLater(300, utils.getHeader, fo, mk, rc)
 			elif rc == 0: # 1 press : search new update 
 				self.timer = wx.CallLater(10, utils.getHeader, fo, mk, rc)
-	script_sharedAltN.__doc__ = _("In the main window, 1 press: Alt+1 to 8: reads the message header, Alt+9 announces the number of attachments, 2 presses: displays the header in an edit box or for Alt+9, reaches the list of attachments, 3 presses: reaches the header in the headers area. In the Write window, Alt1 to 4, reads the headers, 2 presses reaches the header.")
-	script_sharedAltN.category=sharedVars.scriptCategory
 
+	@script(
+		description= _("Thunderbird+G5 : alt arrow gestures, do not change"),
+		gestures=["kb:alt+downArrow", "kb:alt+upArrow", "kb:alt+leftArrow", "kb:alt+rightArrow", "kb:alt+shift+downArrow"]
+	)
 	def script_sharedAltArrow(self, gesture) :
 		mainKey = gesture.mainKeyName
 		fo = o =   api.getFocusObject() # globalVars.focusObject api.getFocusObject()
@@ -1044,7 +1089,12 @@ class AppModule(thunderbird.AppModule):
 				# spellCheckDialog
 				return o.script_focusEdit(gesture)
 		return gesture.send()
-		
+
+	@script(
+		gesture="kb:f4",
+		description=_("Filtered reading of the document in the preview pane, reading tab, reading or Write window, from the list of messages or the document."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedF4(self, gesture) :
 		# document or preview reading
 		if not sharedVars.oQuoteNav : sharedVars.initQuoteNav() # then use  sharedVars.oQuoteNav.*		self.regExp_date =compile ("^(\d\d/\d\d/\d{4} \d\d:\d\d|\d\d:\d\d)$")
@@ -1068,61 +1118,87 @@ class AppModule(thunderbird.AppModule):
 				return gesture.send()
 			else : return sharedVars.oQuoteNav.readMail(fo, o, ("shift" in gesture.modifierNames))
 		else : return gesture.send()
-	script_sharedF4.__doc__ = _("Filtered reading of the document in the preview pane, reading tab, reading or Write window, from the list of messages or the document.")
-	script_sharedF4.category = sharedVars.scriptCategory
-
+	@script(
+		gesture="kb:scrolllock",
+		description=_("Enables or disables  the translation mode of a message."),
+		category = sharedVars.scriptCategory
+	)
 	def script_toggleTranslation(self, gesture) :
 		if not sharedVars.oQuoteNav : sharedVars.initQuoteNav() # then use  sharedVars.oQuoteNav.*		self.regExp_date =compile ("^(\d\d/\d\d/\d{4} \d\d:\d\d|\d\d:\d\d)$")
 		sharedVars.oQuoteNav.toggleTranslation()
-	script_toggleTranslation.__doc__ = _("Enables or disables  the translation mode of a message.")
-	script_toggleTranslation.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:shift+scrolllock",
+		description=_("Enables or disables the display of the cleaned or translated   message in a window."),
+		category = sharedVars.scriptCategory
+	)
 	def script_toggleBrowseMessage(self, gesture) :
 		if not sharedVars.oQuoteNav : sharedVars.initQuoteNav() # then use  sharedVars.oQuoteNav.*		self.regExp_date =compile ("^(\d\d/\d\d/\d{4} \d\d:\d\d|\d\d:\d\d)$")
 		sharedVars.oQuoteNav.toggleBrowseMessage()
-	script_toggleBrowseMessage.__doc__ = _("Enables or disables the display of the cleaned or translated   message in a window.")
-	script_toggleBrowseMessage.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+c",
+		description=_("Folders : displays the accounts menu then  the folders menu for the chosen account."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltC(self, gesture) :
 		if sharedVars.curTab !=  "main" : return gesture.send()
 		# type 1 : read and unread
 		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAccounts, 1)
-	script_sharedAltC.__doc__ = _("Folders : displays the accounts menu then  the folders menu for the chosen account.")
-	script_sharedAltC.category = sharedVars.scriptCategory
 
+
+	@script(
+		gesture="kb:alt+x",
+		description=_("Folders : displays the menu of all inbox folders"),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltX(self, gesture) :
 		if sharedVars.curTab !=  "main" : return gesture.send()
 		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuInboxes, False)
-	script_sharedAltX.__doc__ = _("Folders : displays the menu of all inbox folders")
-	script_sharedAltX.category = sharedVars.scriptCategory
 
-	def script_sharedAltB(self, gesture) :
-		if sharedVars.curTab !=  "main" : return gesture.send()
-		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAllFolders, unRead=False)
-	script_sharedAltB.__doc__ = _("Folders :, displays the menu of all folders")
-	script_sharedAltB.category = sharedVars.scriptCategory
-
-	def script_sharedAltW(self, gesture) :
-		if sharedVars.curTab !=  "main" : return gesture.send()
-		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAllFolders, unRead=True)
-	script_sharedAltW.__doc__ = _("Folders :, displays the menu of all unread folders")
-	script_sharedAltW.category = sharedVars.scriptCategory
-
-
+	@script(
+		gesture="kb:alt+v",
+		description= _("Folders : displays the menu of unread inbox folders"),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltV(self, gesture) :
 		if sharedVars.curTab !=  "main" : return gesture.send()
 		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuInboxes, True)
-	script_sharedAltV.__doc__ = _("Folders : displays the menu of unread inbox folders")
-	script_sharedAltV.category = sharedVars.scriptCategory
+
+	@script(
+		gesture="kb:alt+b",
+		description=_("Folders :, displays the menu of all folders"),
+		category=sharedVars.scriptCategory
+	)
+	def script_sharedAltB(self, gesture) :
+		if sharedVars.curTab !=  "main" : return gesture.send()
+		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAllFolders, unRead=False)
+
+	@script(
+		gesture="kb:alt+w",
+		description=_("Folders :, displays the menu of all unread folders"),
+		category=sharedVars.scriptCategory
+	)
+	def script_sharedAltW(self, gesture) :
+		if sharedVars.curTab !=  "main" : return gesture.send()
+		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAllFolders, unRead=True)
 
 
+	@script(
+		gesture="kb:alt+control+c",
+		description=_("Folders : displays the accounts menu then the unread folders menu for the chosen account."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltCtrlC(self, gesture) :
 		if sharedVars.curTab !=  "main" : return gesture.send()
 		# type 2 : unread only
 		wx.CallLater(50, messengerWindow.folderTreeItem.fMenuAccounts, 2)
-	script_sharedAltCtrlC.__doc__ = _("Folders : displays the accounts menu then the unread folders menu for the chosen account.")
-	script_sharedAltCtrlC.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+home",
+		description=_("Focus : 1 press select the current folder in the folder tree, 2 presesses display a menu  allowings to choose an mail account to reach in the folder tree"),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltHome(self, gesture) :
 		# if sharedVars.curTab != "main" : return gesture.send()
 		rc = int(getLastScriptRepeatCount())
@@ -1133,9 +1209,11 @@ class AppModule(thunderbird.AppModule):
 		elif rc == 1: # 1 press : search new update 
 			tp = 2 if "control" in gesture.modifierNames else 1
 			self.timer = wx.CallLater(d, messengerWindow.folderTreeItem.fMenuAccounts, tp)
-	script_sharedAltHome.__doc__ = _("Focus : 1 press select the current folder in the folder tree, 2 presesses display a menu  allowings to choose an mail account to reach in the folder tree")
-	script_sharedAltHome.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:" + kGrave, 
+		description="Thunderbird+G5 : various usages of the key above Tab",
+	)
 	def script_sharedGrave(self, gesture) :
 		fo = api.getFocusObject()
 		if fo.role in (controlTypes.Role.EDITABLETEXT, controlTypes.Role.DOCUMENT) and controlTypes.State.READONLY not in fo.states :
@@ -1173,9 +1251,12 @@ class AppModule(thunderbird.AppModule):
 		# else : # other active tab, we activate the first tab 
 			# if not messengerWindow.tabs.activateTab(self, api.getFocusObject(), 0) :
 				# return gesture.send()
-	script_sharedGrave.__doc__ = _("Focus : selects a message in the message list from anywhere in the main window.")
-	script_sharedGrave.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+pageDown",
+		description=_("Attachments : announces or displays the attachment pane."),
+		category =sharedVars.scriptCategory
+	)
 	def script_sharedAltPageDown(self, gesture) :
 		fo = api.getFocusObject()
 		ID = str(utils.getIA2Attr(fo))
@@ -1207,9 +1288,11 @@ class AppModule(thunderbird.AppModule):
 				self.timer = wx.CallLater(200, utils.getAttachment, fo, rc)
 				return
 		return gesture.send()
-	script_sharedAltPageDown.__doc__ = _("Attachments : announces or displays the attachment pane.")
-	script_sharedAltPageDown.category =sharedVars.scriptCategory
 
+	@script(
+		description= _("Navigates through quotes in a message"),
+		gestures=["kb:windows+downArrow", "kb:windows+upArrow", "kb:windows+leftArrow", "kb:windows+rightArrow"]
+	)
 	def script_sharedWinArrow(self, gesture) :
 		# quote navigator
 		#beep(440, 5)
@@ -1224,9 +1307,12 @@ class AppModule(thunderbird.AppModule):
 			sharedVars.oQuoteNav.skipQuote(-1)
 		elif mainKey == "rightArrow" :
 			sharedVars.oQuoteNav.skipQuote()
-	script_sharedWinArrow.__doc__ = _("Navigates through quotes in a message")
-	script_sharedWinArrow.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:control+" + kGrave,
+		description=_("Shows the context menu of actions available in the various Thunderbird windows."),
+		category=sharedVars.scriptCategory
+	)
 	def script_showContextMenu(self, gesture) :
 		if getLastScriptRepeatCount () > 0 : return gesture.send()
 		if sharedVars.curTab == "sp:addressbook" :
@@ -1240,9 +1326,12 @@ class AppModule(thunderbird.AppModule):
 			if globalVars.focusObject.role != controlTypes.Role.DOCUMENT : return
 			oMenu = msgComposeWindow.menuCompose.ComposeMenu(self)
 			oMenu.showMenu()
-	script_showContextMenu.__doc__ = _("Shows the context menu of actions available in the various Thunderbird windows.")
-	script_showContextMenu.category =sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:shift+" + kGrave,
+		description=_("Shows the Options context menu of Thunderbird+"),
+		category=sharedVars.scriptCategory
+	)
 	def script_showOptionMenu(self, gesture) :
 		repeats = getLastScriptRepeatCount ()
 		if sharedVars.curFrame != "msgcomposeWindow" :
@@ -1260,25 +1349,34 @@ class AppModule(thunderbird.AppModule):
 				elif repeats == 0 : # (dblPress and repeats== 0) or (not dblPress and repeats == 1) : 
 					self.timer = wx.CallLater(200, sharedVars.oSettings.showOptionsMenu, sharedVars.curFrame) # menu dépendant du frame acti
 			return
-	script_showOptionMenu.__doc__ = _("Shows the Options context menu of Thunderbird+")
-	script_showOptionMenu.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+d",
+		description=_("Shows the dialog for editing the delay before reading the message of the separate reading window."),
+		category = sharedVars.scriptCategory
+	)
 	def script_sharedAltD(self,gesture):
 		if sharedVars.curFrame == "messengerWindow" :
 			wx.CallLater(10, sharedVars.oSettings.editDelay)
 			return
 		return gesture.send()
-	script_sharedAltD.__doc__ = _("Shows the dialog for editing the delay before reading the message of the separate reading window.")
-	script_sharedAltD.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+delete",
+		description=_("Shows the dialog for editing the two delays used for focusing after deleting a message."),
+		category=sharedVars.scriptCategory
+	)
 	def script_sharedAltDelete(self,gesture):
 		if sharedVars.curFrame == "messengerWindow" :
 			wx.CallLater(20, sharedVars.oSettings.editDeleteDelays)
 			return
 		return gesture.send()
-	script_sharedAltDelete__doc__ = _("Shows the dialog for editing the two delays used for focusing after deleting a message.")
-	script_sharedAltDelete.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:f8",
+		description=_("Turn on or off the preview messages panel"),
+		category = sharedVars.scriptCategory
+	)
 	def script_previewPane(self, gesture) :
 		if globalVars.focusObject.role  not in (controlTypes.Role.TREEVIEWITEM , controlTypes.Role.LISTITEM) : 
 			return gesture.send()
@@ -1289,17 +1387,26 @@ class AppModule(thunderbird.AppModule):
 			message(_("Present: Headers and message pane."))
 		else :
 			message(_("Missing : headers and message pane."))
-	script_previewPane.__doc__ = _("Turn on or off the preview messages panel")
-	script_previewPane.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:control+f1",
+		description = _("Shows the add-on help in a web page"),
+		category = sharedVars.scriptCategory
+	)
 	def script_showHelp(self, gesture) :
 		utis.showHelp()
-	script_showHelp.__doc__ = _("Shows the add-on help in a web page")
-	script_showHelp.category = sharedVars.scriptCategory
 
+	@script(
+		gesture="kb:alt+f12",
+		description ="Thunderbird+G5, displays debug dialog",
+	)
 	def script_displayDebug(self, gesture) :
 		debugShow(self, False)
 
+	@script(
+		gesture="kb:control+windows+f12",
+		description ="Thunderbird+G5, displays ascendants and descendants of the focused control",
+	)
 	def script_listObjects(self, gesture) :
 		prevMode = sharedVars.debug
 		sharedVars.debug = True
@@ -1313,6 +1420,10 @@ class AppModule(thunderbird.AppModule):
 		sharedVars.debugLog = "New log\n"
 
 
+	@script(
+		gesture="kb:windows+f12",
+		description ="Thunderbird+G5, initialize debug",
+	)
 	def script_initDebug(self, gesture) :
 		if self.logEvents :
 			self.logEvents = False
@@ -1330,7 +1441,7 @@ class AppModule(thunderbird.AppModule):
 		# sharedVars.debugLog = "New log\n"
 		# # disabModes : 0 nothing, 1 choose overlay, 2 : object init, 3 gainFocus 
 		# self.disabMode +=1
-		# if self.disabMode > 3 : self.disabMode = 0
+		# if self.disabMode > 3 : self.disabMode = 0	
 		# if self.disabMode == 0 : mode = u"Aucune désactivation"
 		# elif self.disabMode == 1 : mode = u"Désactivation de l'intercepteur."
 		# elif self.disabMode == 2 : mode = u"Désactivation de l'initialisation des objets NVDA."
@@ -1356,31 +1467,10 @@ class AppModule(thunderbird.AppModule):
 		"kb:alt+7": "sharedAltN",
 		"kb:alt+8": "sharedAltN",
 		"kb:alt+9": "sharedAltPageDown", # attachments
-		"kb:alt+c": "sharedAltC",
-		"kb:alt+control+c": "sharedAltCtrlC",
-		"kb:alt+x": "sharedAltX",
-		"kb:alt+v": "sharedAltV",
-		"kb:alt+b": "sharedAltB",
 		"kb:alt+home": "sharedAltHome",
 		"kb:alt+control+home": "sharedAltHome",
-		"kb:alt+pagedown":"sharedAltPageDown",
-		"kb:alt+pagedown":"sharedAltPageDown",
-		"kb:alt+leftArrow": "sharedAltArrow",
-		"kb:alt+rightArrow": "sharedAltArrow",
-		"kb:alt+downArrow": "sharedAltArrow",
-		
-		"kb:alt+shift+downArrow": "sharedAltArrow",
-		"kb:alt+upArrow": "sharedAltArrow",
-		"kb:f4": "sharedF4",
-		"kb:scrolllock": "toggleTranslation",
-		"kb:shift+scrolllock": "toggleBrowseMessage",
-		"kb:windows+downarrow": "sharedWinArrow",
-		"kb:windows+uparrow": "sharedWinArrow",
-		"kb:windows+leftarrow": "sharedWinArrow",
-		"kb:windows+rightarrow": "sharedWinArrow",
 		"kb:shift+f4": "sharedF4",
 		"kb:alt+End": "sharedAltEnd",
-		utis.gestureFromScanCode(12, "kb:alt+") : "sharedAltEnd", # 2th  key at the left  of backspace
 		# "kb:control+tab": "sharedCtrlTab",
 		# "kb:control+shift+tab": "sharedCtrlTab",
 		# "kb:control+1": "sharedCtrlN",
@@ -1393,23 +1483,14 @@ class AppModule(thunderbird.AppModule):
 		# # "kb:control+8": "sharedCtrlN",
 		# "kb:control+9": "sharedCtrlN",
 		# "kb:control+0": "sharedCtrlN",
-		utis.gestureFromScanCode(13, "kb:control+") : "sharedCtrlF8", # 13 : first hey at the left of backspace
-		utis.gestureFromScanCode(13, "kb:alt+") : "sharedAltEqual",
-		"kb:f5": "sharedF5", # spellCheck dialog
-		"kb:control+f8": "sharedCtrlF8", # show tabs menu
 		# "kb:alt+pageup": "smartReplyToSender", # smart reply
-		"kb:control+t": "smartReplyToSender",
-		"kb:control+shift+t": "smartReplyToAll", 
-		# "kb:control+f4": "sendCtrlF4",
 		# "kb:control+w": "sendCtrlF4",
-		"kb:control+f4": "sendCtrlF4",
 		# _("kb:shift+control+²") :"showOptionMenu",
 		# _("kb:control+²") :"showContextMenu",
 		"kb:alt+d":"sharedAltD",
 		"kb:alt+delete":"sharedAltDelete",
 		"kb:f8":"previewPane",
 		"kb:control+f1": "showHelp",
-		"kb:alt+f12": "displayDebug",
 		"kb:windows+f12": "initDebug",
 		"kb:windows+control+f12": "listObjects"
 	}

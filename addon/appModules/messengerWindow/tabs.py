@@ -1,9 +1,13 @@
 #-*- coding:utf-8 -*
 # G5
+
+import addonHandler
+addonHandler.initTranslation()
+
 import controlTypes
 from api import getFocusObject, getForegroundObject, setNavigatorObject
 from tones import beep
-import addonHandler,  os, sys
+import   os, sys
 _curAddon=addonHandler.getCodeAddon()
 sharedPath=os.path.join(_curAddon.path,"AppModules", "shared")
 sys.path.append(sharedPath)
@@ -17,7 +21,6 @@ import speech
 from time import sleep
 import globalVars
 
-addonHandler.initTranslation()
 
 # translator "Onglet" stands for "tab"
 msgName = _("Tab {0} of {1} {2}")

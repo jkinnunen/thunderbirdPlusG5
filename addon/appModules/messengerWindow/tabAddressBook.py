@@ -1,6 +1,9 @@
 #-*- coding:utf-8 -*
 # Thunderbird+ G5 tabAddressBook
 
+import addonHandler
+addonHandler.initTranslation()
+
 import api
 from time import sleep
 from NVDAObjects.IAccessible import IAccessible, getNVDAObjectFromPoint
@@ -10,7 +13,7 @@ import controlTypes
 from wx import CallAfter, Menu, EVT_MENU
 from core import  callLater
 import winUser
-import 	addonHandler,  os, sys
+import 	os, sys
 from keyboardHandler import KeyboardInputGesture
 from tones import  beep
 from scriptHandler import getLastScriptRepeatCount
@@ -21,7 +24,6 @@ import  utis, sharedVars, utils115 as utils
 from utils115 import message
 del sys.path[-1]
 
-addonHandler.initTranslation()
 
 oDragDropper128 = oContactLine128 = None
 lastBook = ""
