@@ -103,7 +103,19 @@ def getObjAttrs(o):
 	if hasattr(o, "IA2Attributes"):
 		ID = str(o.IA2Attributes.get("id"))
 	else: ID = ""
-	t =  " {}, ID: {}, States: {}, childCount: {}{},  class: {},".format(o.role.name, ID, states, o.childCount, str(o.windowClassName), nm + val + getAllIA2Attrs(o))
+
+	tActions = ""
+	try :
+		ac = o._get_actionCount()
+		if ac > 0 :
+			tActions = ", Actions : "
+			for j in range (ac) :
+				tActions = tActions + o.getActionName(j) + ", "
+	except: 
+		tActions = ""
+		pass
+
+	t =  " {}, ID: {}, States: {}, childCount: {}{},  class: {},".format("Role." + o.role.name, ID, states, o.childCount, str(o.windowClassName), nm + val + getAllIA2Attrs(o)) + tActions
 	return t
 
 

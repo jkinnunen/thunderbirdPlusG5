@@ -863,16 +863,21 @@ def getMessageStatus115(infoIdx=-1):
 		sharedVars.objLooping = prevLooping
 
 def getFilterInfos128(threadPane, infos=False):
-	if not threadPane:
+	dbg = False
+	if threadPane is None:
 		threadPane = commonVars.cv.threadPane
-		if not threadPane: beep(100, 30)
-		else: beep(440, 30)
+	if threadPane is None: beep(100, 30)
+	if dbg: 
+		sharedVars.log(threadPane, "Status bar infos and filter, threadPane")
 	# children of threadPane: | i1, 86, , IA2ID: quick-filter-bar | i0, 86, , IA2ID: quickFilterBarContainer | i7, 91, , IA2ID: qfb-results-label
 	o = findChildByRoleID(threadPane, controlTypes.Role.SECTION, ID="quick-filter-bar",startIdx=0)
+	if dbg: sharedVars.log(o, "quick filter bar")
 	if o is None: return "", ""
 	o = oContainer  = findChildByRoleID(o, controlTypes.Role.SECTION, ID="quickFilterBarContainer",startIdx=0)
+	if dbg: sharedVars.log(o, "quick filter bar container")
 	if o is None: return "", ""
-	o = findChildByRoleID(o, controlTypes.Role.TEXTFRAME, ID="qfb-results-label",startIdx=6)
+	o = findChildByRoleID(o, controlTypes.Role.TEXTFRAME, ID="qfb-results-label",startIdx=0)
+	if dbg: sharedVars.log(o, "must be textFrame qfbLabel")
 	count = ""
 	if o and o.firstChild:
 		count = _("Filtered: ") + str(o.firstChild.name) + " / "
@@ -881,17 +886,20 @@ def getFilterInfos128(threadPane, infos=False):
 	# 2. retrieve filter expression
 	word = options = ""
 	# keyword edit: path = | i0, 86, , IA2ID: quickFilterBarContainer | i1, 91, , IA2ID: qfb-qs-textbox | i0, 39,  | i0, 8,  ,  
-	o = oContainer.getChild(1).firstChild.firstChild # new in TB 128
-	if o.role == controlTypes.Role.EDITABLETEXT and o.value:
-		word = str(o.value)
-	# toggle buttons
-	o = oContainer.getChild(2) # unread toggle button
-	while o is not None:
-		if o.role ==  controlTypes.Role.TOGGLEBUTTON and controlTypes.State.PRESSED in o.states:
+	# new version 2026.10.12
+	if dbg: sharedVars.log(oContainer, "oContainer")
+	for o in oContainer.recursiveDescendants:
+		if o.role == controlTypes.Role.EDITABLETEXT and o.value:
+			word =  str(o.value)
+		elif o.role ==  controlTypes.Role.TOGGLEBUTTON and controlTypes.State.PRESSED in o.states:
+			if dbg: sharedVars.log(o, "oContainer pressed toggle button: ")
 			options += o.name + ", "
-		# # sharedVars.log(o, "child")
-		o = o.next
-	# # sharedVars.logte(infos)	
+		elif o.role == controlTypes.Role.SECTION and hasID(o, "quickFilterBarSecondFilters"):
+			break
+		# elif o.role == controlTypes.Role.TEXTFRAME  and hasID(o, "qfb-results-label"):
+			# if dbg: sharedVars.log(o.parent, "result-label parent")
+			# options += str(o.firstChild.name) 
+
 	filtExpr = ""
 	if word or options: 
 		filtExpr = ", " + _("Filter: ")
@@ -901,6 +909,7 @@ def getFilterInfos128(threadPane, infos=False):
 		filtExpr += options
 	return count, filtExpr
 def getMessageStatus128(infoIdx=-1):
+	dbg = False
 	# returns total messages, filter infos
 	try: # finally
 		prevLooping = sharedVars.objLooping
@@ -913,12 +922,13 @@ def getMessageStatus128(infoIdx=-1):
 		for i in range(0, 2):
 			threadPane = getThreadPaneFromFG()	# get threadPane
 			if threadPane: 
+				if dbg: beep(700, 40)
 				o = getChildByRoleIDName(threadPane, controlTypes.Role.SECTION, ID="threadPaneHeaderBar", name="", idx=0)
 			else: o = None
 			if o is not None: o = getChildByRoleIDName(o, controlTypes.Role.SECTION, ID="", name="", idx=0)
 			# IA2ID = threadPaneFolderCountContainer in , Role.SECTION
 			if o is not None: o = getChildByRoleIDName(o, controlTypes.Role.SECTION, ID="threadPaneFolderCountContainer", name="", idx=1)
-			# sharedVars.log(o, "threadPaneFolderCountContainer") 
+			if dbg: sharedVars.log(o, "threadPaneFolderCountContainer") 
 			# if o is None:
 				# commonVars.cv.threadPane = None # this reference must be searched again
 			else:
@@ -1378,148 +1388,118 @@ def getHeader(o, key, repeats=0, say=True):
 			hdrObj.doAction()
 		except: 
 			clickObject(hdrObj, False) # right click
-	return  ""
+	# return  ""
 
-def getAttachment(oFocus=None, repeats=0):
+def attachSaveAllFromAttachentItem(attachItem):
+	o = attachItem.parent.previous # utis.findParentByID(attachItem, controlTypes.Role.BUTTON, "attachmentBar")
+	if not o : return beep(100, 30)
+	attachSaveAll = None
+	o = o.firstChild
+	while o is not None:
+		if o.role == controlTypes.Role.BUTTON and hasID(o, "attachmentSaveAllMultiple"): 
+			attachSaveAll = o
+			break
+		o = o.next
+	if attachSaveAll is not None :
+			attachSaveAll.doAction()
+			# callLater(20, cancelSpeech)
+
+			
+	# o = attachBar.firstChild
+	# while o is not None: 
+		# sharedVars.log(o, "attachBar child")
+		# if o.role == controlTypes.Role.BUTTON and hasID(o, "attachmentSaveAllMultiple")
+		# attachSaveAll = o
+		# break
+		# o = o.next
+
+	
+def getAttachment (oFocus=None, repeats=0):
 	# in  main window:name: doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID: attachmentName Path: Role-FRAME| i31, Role-GROUPING, , IA2ID: tabpanelcontainer | i2, Role-PROPERTYPAGE, , IA2ID: mail3PaneTab1 | i0, Role-INTERNALFRAME, , IA2ID: mail3PaneTabBrowser1 | i0, Role-GROUPING,  | i4, Role-SECTION, , IA2ID: messagePane | i0, Role-INTERNALFRAME, , IA2ID: messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID: attachmentName , IA2Attr: id: attachmentName, display: flex, xml-roles: button, tag: label, , Actions: click,  ;
 	# In separate window: 18 of 20, name: doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID: attachmentName, Path: Role-FRAME| i4, Role-INTERNALFRAME, IA2ID: messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID: attachmentName
-	# sharedVars.debugLog = "getAttachment, repeats: " + str(repeats) + "\n"
+	dbg = False
+	if dbg:  sharedVars.debugLog = "getAttachment, curTab={}, , repeats={}".format(sharedVars.curTab, str(repeats)) + "\n"
 	if not oFocus: oFocus = api.getFocusObject()
+	if dbg: sharedVars.log(oFocus, "noFocus")
 	if oFocus.role in (controlTypes.Role.DOCUMENT, controlTypes.Role.LINK): 
-		# if repeats > 0 and oFocus.role == controlTypes.Role.LINK: beep(700, 40)
 		o = findParentByRole(oFocus, controlTypes.Role.GROUPING)
 		# sharedVars.log(o, "is Grouping from doc ? ")
 		if repeats > 0 and o.role != controlTypes.Role.GROUPING: return beep(100, 10)
 	elif hasID(oFocus, "threadTree"):
-		o = getMessagePane()
+		o = getMessagePane(	)
 		# sharedVars.log(o, "in mainWindow , expected messagePane")
 		o = o.firstChild.firstChild
 		# sharedVars.log(o, "in mainWindow , expected Grouping")
 	else: return beep(100, 30)
 	
 	# common to list and separate reading window
+	oGrouping = o
+	if dbg: sharedVars.log(oGrouping, "getAttachment in " + sharedVars.curTab  + " must be role.grouping with iD=None")
 	# current object is grouping with no IA2ID
-	oStart = o.getChild(14) # cannot be 15 which ID is messagePane
-	oLast = o.lastChild
-	oList = oLast if oLast.role == controlTypes.Role.LIST  else None
-	ID = str(getIA2Attr(oLast))
-	if ID in ("messagepane", "content"):
+	# enum  direct descendants of grouping
+	attachBar = None
+	attachList = None
+	i = 14
+	dd = oGrouping.getChild(i)
+	# search for attachmentBar 
+	while dd is not None:
+		if dd.role == controlTypes.Role.BUTTON and hasID(dd, "attachmentBar") :
+			if dbg: sharedVars.log(dd, "direct des " + str(i))
+			attachBar = dd
+			break
+		i += 1
+		dd = dd.next
+	if attachBar is None :
 		return message(_("No attachment."))
-	elif ID.startswith("attachmentSaveAll"):  # hidden attachment list
-		o = oStart
-		# 1: search:   Role.TOGGLEBUTTON, ID: attachmentToggle, childCount: 0
-		while o is not None:
-			ID = str(getIA2Attr(o))
-			if o.role == controlTypes.Role.TOGGLEBUTTON and ID == "attachmentToggle":
-				if controlTypes.State.PRESSED not in o.states: 
-					o.doAction()
-					sleep(0.1)
-					oList = o.parent.lastChild
-				break
-			o = o.next
-		if oList is None :
-			# message("No attachment")
-			return
-
-	# 2: search again from oStart
-	text =  ""
-	o = oStart
-	while o is not None:
-		# sharedVars.log(o, "getAttachmment, in loop: ")
-		ID = str(getIA2Attr(o))
-		if ID == "attachmentCount":
-			text +=  str(o.name)
-		elif ID == "attachmentSize":
-			text +=  o.name
-		o = o.next
-	if repeats == 0:
-		text += ", "
-				
-		o = oList.firstChild
-		while o is not None: 
-			text += str(o.name) + ", "
-			o = o.next
-		message(text + ", " + _	("Two presses to reach the list."))
+	if controlTypes.State.COLLAPSED in attachBar.states: 
+		# the doAction also gives the focus on the attachment list 
+		attachBar.doAction()
+		# wx.CallLater(300, getAttachment, oFocus, 0)
 		return
-	elif repeats > 0: 
-		cc =  oList.childCount
-		if cc > 0: 
-			oList = oList.firstChild
-			oList.setFocus()
-			if cc == 1:
-				cancelSpeech()
-				CallLater(500, message, oList.name)
-				KeyboardInputGesture.fromName("shift+f10").send()
-
-def getAttachment_notOK(oFocus=None, repeats=0):
-	# in  main window:name: doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID: attachmentName Path: Role-FRAME| i31, Role-GROUPING, , IA2ID: tabpanelcontainer | i2, Role-PROPERTYPAGE, , IA2ID: mail3PaneTab1 | i0, Role-INTERNALFRAME, , IA2ID: mail3PaneTabBrowser1 | i0, Role-GROUPING,  | i4, Role-SECTION, , IA2ID: messagePane | i0, Role-INTERNALFRAME, , IA2ID: messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID: attachmentName , IA2Attr: id: attachmentName, display: flex, xml-roles: button, tag: label, , Actions: click,  ;
-	# In separate window: 18 of 20, name: doc_thunderbirdPlusG5_fr.md, Role.BUTTON, IA2ID: attachmentName, Path: Role-FRAME| i4, Role-INTERNALFRAME, IA2ID: messageBrowser | i0, Role-GROUPING,  | i18, Role-BUTTON, , IA2ID: attachmentName
-	# sharedVars.debugLog = "getAttachment, repeats: " + str(repeats) + "\n"
-	if not oFocus: oFocus = api.getFocusObject()
-	if oFocus.role in (controlTypes.Role.DOCUMENT, controlTypes.Role.LINK): 
-		# if repeats > 0 and oFocus.role == controlTypes.Role.LINK: beep(700, 40)
-		o = findParentByRole(oFocus, controlTypes.Role.GROUPING)
-		# sharedVars.log(o, "is Grouping from doc ? ")
-		if repeats > 0 and o.role != controlTypes.Role.GROUPING: return beep(100, 10)
-	elif hasID(oFocus, "threadTree"):
-		o = getMessagePane()
-		# sharedVars.log(o, "in mainWindow , expected messagePane")
-		o = o.firstChild.firstChild
-		# sharedVars.log(o, "in mainWindow , expected Grouping")
-	else: return beep(100, 30)
-	
-	# common to list and separate reading window
-	oStart = o.getChild(14) # cannot be 15 which ID is messagePane
-	oLast = o.lastChild
-	# sharedVars.log(oStart, "oStart, repeats: " + str(repeats))
-	# sharedVars.log(oLast, "oLast, repeats: " + str(repeats))		
-
-	oList = None
-	ID = str(getIA2Attr(oLast))
-	if ID in ("messagepane", "content"):
-		return message(_("No attachment."))
-	# elif ID.startswith("attachmentSaveAll"):  # hidden attachment list
-		# o = oStart
-		# # search:   Role.TOGGLEBUTTON, ID: attachmentToggle, childCount: 0
-		# while o is not None:
-			# ID = str(getIA2Attr(o))
-			# if o.role == controlTypes.Role.TOGGLEBUTTON and ID == "attachmentToggle":
-				# if controlTypes.State.PRESSED not in o.states: 
-					# # beep(440, 10)
-					# CallAfter(o.doAction)
-					# return
-			# o = o.next
-	elif ID == "attachmentList": 
-		oList = oLast
-
-	text =  ""
-	o = oStart
+		# # sleep(0.1)
+		# api.processPendingEvents() # very important
+		# fo = api.getFocusObject()
+		# sharedVars.log(fo.parent, "is it attach list ?")
+		# if hasID(fo.parent, "attachmentList"):
+			# attachList = fo.parent
+	# get togglebutton and count infos from attachBar descendants
+	btnToggle = None
+	attachInfos = ""
+	dd = attachBar.firstChild
+	while dd is not None :
+		if dd.role== controlTypes.Role.TOGGLEBUTTON and   hasID(dd, "attachmentToggle"):
+			if dbg: sharedVars.log(dd, "attachBar descendant toggleButton")
+			btnToggle = dd
+		elif dd.role == controlTypes.Role.LABEL :
+			attachInfos += str(dd.name) + ", "  
+		dd = dd.next
+	# if dbg: sharedVars.logte("attachBarInfos: " + attachInfos)
+	# if btnToggle and  controlTypes.State.PRESSED not in btnToggle.states: 
+		# if dbg: sharedVars.logte("btnToggle is not pressed")
+		# btnToggle.doAction()
+	# not needed : attachBar.setFocus()
+	o = oGrouping.lastChild
 	while o is not None:
-		# sharedVars.log(o, "getAttachmment, in loop: ")
-		ID = str(getIA2Attr(o))
-		if ID == "attachmentCount":
-			text +=  str(o.name)
-		elif ID == "attachmentSize":
-			text +=  o.name
+		if o.role == controlTypes.Role.LIST and hasID(o, "attachmentList"):
+			if dbg: sharedVars.log(o, "new grouping children")
+			attachList = o
+		o = o.previous
+	if not attachList : 
+		message("Attachment list was not found.")
+		return
+	if repeats == 1: # 2 presses
+		attachList.setFocus()
+		return
+	# if repeats   == 0, say attachInfos and attach list items 
+	if repeats != 0: return
+	i = 1
+	o = attachList.firstChild
+	while o is not None: 
+		attachInfos += str(i) + ": " +str(o.name) + ", "
+		i += 1
 		o = o.next
-	# sharedVars.logte(text)
-	if repeats == 0:
-		text += ", "
-		o = oList.firstChild
-		while o is not None: 
-			text += str(o.name) + ", "
-			o = o.next
-		message(text + ", " + _("Two presses to reach the list."))
-	elif repeats > 0: 
-		cc = oList.childCount
-		if cc >  0: 
-			oList = oList.firstChild
-			oList.setFocus()
-			if cc > 1:
-				return
-			cancelSpeech()
-			CallLater(500, message, oList.name)
-			KeyboardInputGesture.fromName("shift+f10").send()
+	message(attachInfos + ", " + _	("Two presses to reach the list."))
+	return
 
 def getChildByRoleIDName(oParent, role, ID, name, idx=0): # attention: controlTypes roles
 	if sharedVars.debug: 

@@ -877,6 +877,10 @@ class AppModule(thunderbird.AppModule):
 		elif o.role == controlTypes.Role.LISTITEM and utils.hasID(o.parent, "attachmentList"):
 			o.parent.previous.doAction()
 			return
+		elif sharedVars.curTab == "comp" :
+			# 2026-10-29 skip the splitter between subject and message body in version 159
+			if o.role == controlTypes.Role.EDITABLETEXT and ID == "msgSubject":
+				return KeyboardInputGesture.fromName("f6").send()
 		elif sharedVars.curTab == "sp:addressbook":
 			if utis.TBMajor() > 127:
 				nextGesture = messengerWindow.tabAddressBook.getNextControl(o, ID)
@@ -885,6 +889,16 @@ class AppModule(thunderbird.AppModule):
 			if ID.startswith("searchInput"):
 				return KeyboardInputGesture.fromName ("f6").send () 
 		return gesture.send()
+
+	@script(
+		gesture="kb:shift+tab",
+	)
+	def script_sharedShiftTab(self, gesture):
+		if sharedVars.curTab == "comp":
+			o = api.getFocusObject()
+			if o.role == controlTypes.Role.DOCUMENT:
+				return KeyboardInputGesture.fromName("shift+f6").send()
+		gesture.send()
 
 	@script(
 		gesture="kb:escape",
@@ -1354,10 +1368,13 @@ class AppModule(thunderbird.AppModule):
 		elif ID.startswith("threadTree") or parID == "messagepane"  or fo.role == controlTypes.Role.LINK:
 			if ID.startswith("threadTree") and not utils.getMessagePane():
 				return message(_("The headers pane is not displayed. Please press F8 then try again"))
+			if ID.startswith("threadTree") and controlTypes.State.SELECTED not in fo.states :
+				fo.doAction()
+				sleep(0.07)
 			if ID.startswith("threadTree") and controlTypes.State.COLLAPSED in fo.states:
-				# beep(432, 2)
 				self.counter += 1
-				utis.sendKey("rightArrow", num=1, delay=0.05)
+				# does not expand : fo.doAction()
+				KeyboardInputGesture.fromName("rightArrow").send()
 				return wx.CallLater(100, self.script_sharedAltPageDown, gesture)
 			self.counter = 0
 			# sharedVars.log(fo,"altPageDown focus")
@@ -1369,6 +1386,9 @@ class AppModule(thunderbird.AppModule):
 			elif rc == 0: 
 				self.timer = wx.CallLater(200, utils.getAttachment, fo, rc)
 				return
+		elif parID == "attachmentList" :
+			wx.CallAfter(utils.attachSaveAllFromAttachentItem, fo)
+			
 		return gesture.send()
 
 	@script(
@@ -1681,8 +1701,10 @@ def sayFilterRemoved(oCurRow):
 			beep(120, 40)
 			infos = _("No messages displayed") + ", " + infos
 	name = ""
-	if oCurRow is not None and hasattr(oCurRow, "name"):
-		name = " " + oCurRow.name
+	if hasattr(fo, "name"):
+		name = str(fo.name)
+	# if oCurRow is not None and hasattr(oCurRow, "name"):
+		# name = " " + str(oCurRow.name)
 	message(_("Filter removed") + infos+ name)
 
 def activateMenuItem(o, ID):
